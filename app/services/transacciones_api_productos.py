@@ -1,62 +1,54 @@
 import requests
+from typing import Dict, Any
 
-BASE = "http://localhost:8000/products"
-TIME_OUT = 10
+BASE_URL = "http://localhost:8000"
 
-# Obtiene la lista de productos de FastAPI
-def list_products(limit: int = 20, offset: int = 0) -> dict:
-    try:
-        r = requests.get(f"{BASE}/", params={"limit": limit, "offset": offset}, timeout=TIME_OUT)
-        if 200 <= r.status_code < 300:
-            return r.json() if r.content else {}
-        raise ValueError(f"Error {r.status_code}", r.status_code, r.text)
-    except requests.exceptions.RequestException as e:
-        raise ValueError("Error de conexión", None, str(e))
 
-# Obtiene el producto con el id que se le pasa como parámetro
-def get_product(product_id: str) -> dict:
-    try:
-        r = requests.get(f"{BASE}/{product_id}", timeout=TIME_OUT)
-        if 200 <= r.status_code < 300:
-            return r.json() if r.content else {}
-        raise ValueError(f"Error {r.status_code}", r.status_code, r.text)
-    except requests.exceptions.RequestException as e:
-        raise ValueError("Error de conexión", None, str(e))
+# LISTAR PRODUCTOS desde FastAPI
+# GET /products/?limit=500&offset=0
+# Retorna: {"total": X, "items": [...]}
+def list_products(limit: int = 500, offset: int = 0) -> Dict[str, Any]:
+    response = requests.get(
+        f"{BASE_URL}/products/",
+        params={"limit": limit, "offset": offset}
+    )
+    response.raise_for_status()
+    return response.json()
 
-# Crea un producto nuevo
-def create_product(data: dict) -> dict:
-    try:
-        r = requests.post(f"{BASE}/", json=data, timeout=TIME_OUT)
-        if 200 <= r.status_code < 300:
-            return r.json() if r.content else {}
-        raise ValueError(f"Error {r.status_code}", r.status_code, r.text)
-    except requests.exceptions.RequestException as e:
-        raise ValueError("Error de conexión", None, str(e))
 
-# Actualiza el producto indicado
-def update_product(product_id: str, data: dict) -> dict:
-    try:
-        r = requests.put(f"{BASE}/{product_id}", json=data, timeout=TIME_OUT)
-        if 200 <= r.status_code < 300:
-            return r.json() if r.content else {}
-        raise ValueError(f"Error {r.status_code}", r.status_code, r.text)
-    except requests.exceptions.RequestException as e:
-        raise ValueError("Error de conexión", None, str(e))
+# OBTENER PRODUCTO POR ID
+# GET /products/{product_id}
+def get_product(product_id: str) -> Dict | None:
+    response = requests.get(f"{BASE_URL}/products/{product_id}")
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json()
 
-# Borra el producto indicado
-def delete_product(product_id: str):
-    try:
-        r = requests.delete(f"{BASE}/{product_id}", timeout=TIME_OUT)
-        if 200 <= r.status_code < 300:
-            return r.json() if r.content else {}
-        raise ValueError(f"Error {r.status_code}", r.status_code, r.text)
-    except requests.exceptions.RequestException as e:
-        raise ValueError("Error de conexión", None, str(e))
 
-# --- Linea de pueba ---
-if __name__ == "__main__":
-    try:
-        print("Consultando productos...")
-        print(list_products())
-    except Exception as error:
-        print(f"No se pudo conectar: {error}")
+# CREAR PRODUCTO
+# POST /products/
+def create_product(producto: Dict) -> Dict:
+    response = requests.post(f"{BASE_URL}/products/", json=producto)
+    response.raise_for_status()
+    return response.json()
+
+
+# ACTUALIZAR PRODUCTO
+# PUT /products/{product_id}
+def update_product(product_id: str, datos: Dict) -> Dict | None:
+    response = requests.put(f"{BASE_URL}/products/{product_id}", json=datos)
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json()
+
+
+# ELIMINAR PRODUCTO
+# DELETE /products/{product_id}
+def delete_product(product_id: str) -> bool:
+    response = requests.delete(f"{BASE_URL}/products/{product_id}")
+    if response.status_code == 404:
+        return False
+    response.raise_for_status()
+    return True

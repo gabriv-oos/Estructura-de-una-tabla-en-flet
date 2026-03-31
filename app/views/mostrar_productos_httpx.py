@@ -1,11 +1,35 @@
 import flet as ft
 from typing import Any
-from app.services.transacciones_api_productos import list_products, get_product, create_product, update_product, delete_product
+from app.services.transacciones_api_productos_httpx import list_products, get_product, create_product, update_product, delete_product
 from app.components.popup import show_popup, show_popup_auto_close, show_snackbar, confirm_dialog
 from app.components.error import ApiError, api_error_to_text
 from app.styles.estilos import Colors, Textos_estilos, Card
+from app.views.nuevo_editar import formulario_nuevo_editar_producto #Se agrega la ventana de nuevo/editar
 
-def products_view(page: ft.Page) -> ft.Control:
+def products_view(page:ft.Page) -> ft.Control:
+    ############# Nuevo producto ##############
+    #Esta función se ejecuta al hacer click en "Nuevo producto"
+    #lo que hace en primer lugar es abrir la ventana para captura de datos
+    def inicio_nuevo_producto(_e):
+        #Se crea la función para transferir al formulario de nuevo producto
+        async def crear_nuevo_producto(data:dict):#Esta función se lleva a la ventana para capturar
+            try:
+                #Se conecta a transacciones_api_productos.py para crear en la BD un nuevo produto
+                await create_product(data)
+                await show_snackbar(page, "Éxito", "Producto creado.", bgcolor=Colors.SUCCESS)
+                await actualizar_data()
+            except ApiError as ex:
+                await show_popup(page, "Error", api_error_to_text(ex))
+            except Exception as ex:
+                await show_snackbar(page, "Error", str(ex), bgcolor=Colors.DANGER)
+                
+        #Se llama a la función para abrir la ventana y poder capturar los datos,
+        # regresa 3 funciones(dlg,open_ y close), se ejecuta open_()
+        dlg, open_, close = formulario_nuevo_editar_producto(page, on_submit=crear_nuevo_producto, initial=None)
+        open_() #Abre la ventana
+    ############ FIN nuevo producto ############
+    btn_nuevo = ft.Button("Nuevo producto",icon=ft.Icons.ADD,on_click=inicio_nuevo_producto)
+
     rows_data: list[dict[str, Any]] = []
     total_items = 0
     total_text = ft.Text("Total de productos: (cargando...)", style=Textos_estilos.H4)
@@ -45,7 +69,7 @@ def products_view(page: ft.Page) -> ft.Control:
 
     # ────────────────────────────────────────────────────────
     # Función actualizar_data()
-    #   - Se conecta a transacciones_api_productos.py para
+    #   - Se conecta a transacciones_api_productos_httpx.py para
     #     solicitar el listado de productos desde FastAPI.
     #   - Recupera el total de items en total_items.
     #   - Recupera los registros en rows_data.
@@ -53,8 +77,8 @@ def products_view(page: ft.Page) -> ft.Control:
     async def actualizar_data():
         nonlocal rows_data, total_items
         try:
-            # Parte 1 ▸ llamada al servicio (GET /products/)
-            data = list_products(limit=500, offset=0)
+            # Parte 1 ▸ llamada al servicio async (GET /products/)
+            data = await list_products(limit=500, offset=0)
 
             # Parte 2 ▸ recuperar total e items
             total_items = int(data.get("total", 0))
@@ -91,11 +115,16 @@ def products_view(page: ft.Page) -> ft.Control:
     # Ejecuta la carga de datos al iniciar la vista
     page.run_task(actualizar_data)
 
-    # Devuelve la vista completa: texto de total + tabla
-    return ft.Column(
+    contenido = ft.Column(
+        #expand=True,
+        spacing=30,
+        scroll=ft.ScrollMode.AUTO,
         controls=[
+            btn_nuevo,
             total_text,
-            tabla,
-        ],
-        spacing=10,
+            ft.Container(content=tabla)
+        ]
     )
+    tarjeta = ft.Container(content=contenido,**Card.tarjeta)
+
+    return tarjeta
