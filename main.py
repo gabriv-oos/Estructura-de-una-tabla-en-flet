@@ -4,8 +4,8 @@ from app.views.mostrar_productos_httpx import products_view
 def main(page:ft.Page):
     page.title="Aplicación con estilos"
     page.scroll=ft.ScrollMode.ADAPTIVE
-    page.bgcolor="#FFFFFF"              # Fondo blanco explícito
-    page.theme_mode=ft.ThemeMode.LIGHT  # Fuerza tema claro (evita dark mode de macOS)
+    page.bgcolor="#FFFFFF"              
+    page.theme_mode=ft.ThemeMode.LIGHT  
     page.add(products_view(page))
 
 if __name__=="__main__":
